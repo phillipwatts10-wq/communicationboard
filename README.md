@@ -31,6 +31,8 @@ This only stops students opening settings by accident – it is **not** security
 
 Settings are saved on that iPad only:
 - 8 or 12 buttons per screen
+- speech on or off (mute). When muted the board is silent and shows "Sound off";
+  words still join the sentence. Test voice still plays so staff can check it.
 - voice and speaking speed (starts at 0.8), with a Test voice button
 - double-press protection (starts at 1 second)
 - show or hide each bottom-bar key (hidden keys leave a gap so others don't move)

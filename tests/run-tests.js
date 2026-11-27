@@ -663,6 +663,44 @@ async function testMyWords(browser) {
   await context.close();
 }
 
+// ---------- TEST 9: mute ----------
+async function testMute(browser) {
+  const { page, context, errors } = await newPage(browser, VIEWPORTS[0], { pressDelayMs: 0 });
+  check(await page.isHidden("#mute-indicator"), "Mute: 'Sound off' hidden when speech is on");
+  await openSettings(page);
+  check(await page.getAttribute('[data-muted="false"]', "aria-pressed") === "true", "Mute: speech on by default");
+  await page.click('[data-muted="true"]');
+  const before = await speakCount(page);
+  await page.click("#test-voice");
+  check(await speakCount(page) === before + 1, "Mute: Test voice still plays for staff");
+  await page.click("#close-settings");
+  check(await page.isVisible("#mute-indicator"), "Mute: 'Sound off' shown on the board");
+  await page.screenshot({ path: path.join(SHOTS, "muted.png") });
+
+  const quiet = await speakCount(page);
+  await page.click('#grid [data-word="i"]');
+  await page.click('#grid [data-word="want"]');
+  await page.click('#fixed-bar [data-word="yes"]');
+  await page.click("#strip");
+  check(await speakCount(page) === quiet, "Mute: words, fixed keys and strip make no sound");
+  check(JSON.stringify(await sentenceOf(page)) === '["i","want","yes"]', "Mute: words still join the sentence");
+  check(await screenOf(page) === "want", "Mute: pages still open");
+
+  await page.reload();
+  check(await page.isVisible("#mute-indicator"), "Mute: still muted after reload");
+  await page.click('#grid [data-word="i"]');
+  check(await speakCount(page) === 0, "Mute: silent after reload");
+
+  await openSettings(page);
+  await page.click('[data-muted="false"]');
+  await page.click("#close-settings");
+  check(await page.isHidden("#mute-indicator"), "Mute: 'Sound off' hidden after unmuting");
+  await page.click('#grid [data-word="want"]');
+  check((await lastSpoken(page)).text === "want", "Mute: speech back after unmuting");
+  check(errors.length === 0, "Mute: no page errors (" + errors.join("; ") + ")");
+  await context.close();
+}
+
 // ---------- run ----------
 let BASE;
 (async () => {
@@ -678,6 +716,7 @@ let BASE;
     await testLongSentence(browser);
     await testStaffTouch(browser);
     await testMyWords(browser);
+    await testMute(browser);
   } catch (e) {
     failures.push("Test crashed: " + e.stack);
   }

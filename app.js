@@ -15,7 +15,8 @@
     rate: 0.8,
     voiceURI: "",
     pressDelayMs: 1000,
-    hiddenFixedKeys: []
+    hiddenFixedKeys: [],
+    muted: false
   };
 
   const $ = (id) => document.getElementById(id);
@@ -168,6 +169,7 @@
     if (isNaN(s.pressDelayMs)) s.pressDelayMs = 1000;
     if (!Array.isArray(s.hiddenFixedKeys)) s.hiddenFixedKeys = [];
     if (typeof s.voiceURI !== "string") s.voiceURI = "";
+    s.muted = s.muted === true;
     return s;
   }
 
@@ -233,7 +235,17 @@
     if (synth) synth.cancel();
   }
 
+  // Board presses use speak(). When staff have muted speech, the board is
+  // silent. Staff test buttons use speakAlways() so the voice can be checked.
   function speak(text) {
+    if (settings.muted) {
+      stopSpeech();
+      return;
+    }
+    speakAlways(text);
+  }
+
+  function speakAlways(text) {
     if (!synth || !text) return;
     stopSpeech(); // a new press stops earlier speech
     const u = new SpeechSynthesisUtterance(text);
@@ -559,6 +571,9 @@
     document.querySelectorAll("[data-grid]").forEach((b) => {
       b.setAttribute("aria-pressed", String(Number(b.dataset.grid) === settings.gridSize));
     });
+    document.querySelectorAll("[data-muted]").forEach((b) => {
+      b.setAttribute("aria-pressed", String((b.dataset.muted === "true") === settings.muted));
+    });
     fillVoiceList();
     $("rate").value = String(settings.rate);
     $("rate-value").textContent = settings.rate.toFixed(2);
@@ -616,6 +631,20 @@
     });
   });
 
+  document.querySelectorAll("[data-muted]").forEach((b) => {
+    b.addEventListener("click", () => {
+      settings.muted = b.dataset.muted === "true";
+      if (settings.muted) stopSpeech();
+      saveSettings();
+      drawMuteIndicator();
+      fillSettings();
+    });
+  });
+
+  function drawMuteIndicator() {
+    $("mute-indicator").hidden = !settings.muted;
+  }
+
   $("voice-select").addEventListener("change", (e) => {
     settings.voiceURI = e.target.value;
     saveSettings();
@@ -633,7 +662,7 @@
     saveSettings();
   });
 
-  $("test-voice").addEventListener("click", () => speak("This is how I will sound."));
+  $("test-voice").addEventListener("click", () => speakAlways("This is how I will sound."));
 
   $("fixed-toggles").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-toggle]");
@@ -653,6 +682,7 @@
     state.page = 0;
     drawGrid();
     drawFixedBar();
+    drawMuteIndicator();
     fillSettings();
   });
 
@@ -860,7 +890,7 @@
   });
 
   $("we-listen").addEventListener("click", () => {
-    speak($("we-speak").value.trim() || $("we-label").value.trim());
+    speakAlways($("we-speak").value.trim() || $("we-label").value.trim());
   });
 
   $("we-save").addEventListener("click", () => {
@@ -926,6 +956,7 @@
   }, { passive: false });
 
   // ---------- Start ----------
+  drawMuteIndicator();
   drawGrid();
   drawStrip();
   drawFixedBar();

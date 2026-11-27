@@ -35,7 +35,14 @@
       <div id="grid" class="grid"></div>
 
       <div id="right-rail" class="rail">
-        <button id="staff" type="button" aria-label="Staff settings. Press and hold for 3 seconds.">Staff</button>
+        <div class="staff-corner">
+          <button id="staff" type="button" aria-label="Staff settings. Press and hold for 3 seconds.">Staff</button>
+          <!-- Only shown when speech is muted. Not a button. -->
+          <div id="mute-indicator" hidden>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 18h8l10-8v28l-10-8H6z"/><path d="M32 18l10 12M42 18L32 30" stroke="#000" stroke-width="4" stroke-linecap="round" fill="none"/></svg>
+            <span>Sound off</span>
+          </div>
+        </div>
         <button id="next" class="arrow control" type="button" aria-label="Next page">
           <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 6l22 18-22 18z"/></svg>
         </button>
@@ -84,6 +91,14 @@
         <div class="choice-row">
           <button type="button" class="choice" data-grid="8">8</button>
           <button type="button" class="choice" data-grid="12">12</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>Speech</h3>
+        <div class="choice-row">
+          <button type="button" class="choice" data-muted="false">Speech on</button>
+          <button type="button" class="choice" data-muted="true">Speech off (muted)</button>
         </div>
       </section>
 

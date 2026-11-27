@@ -91,7 +91,8 @@ window.COMMUNICATION_DATA = {
         rate: 0.8,            // speaking speed (1 is normal)
         voiceURI: "",         // empty = British English if available
         pressDelayMs: 1000,   // double-press protection, in milliseconds
-        hiddenFixedKeys: []   // e.g. ["more"] to hide the "more" key
+        hiddenFixedKeys: [],  // e.g. ["more"] to hide the "more" key
+        muted: false          // true = board starts with speech off
       },
 
       // ---------- COLOURS ----------

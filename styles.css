@@ -158,8 +158,7 @@ button {
 /* The staff button is small and plain so students are not drawn to it. */
 #right-rail { grid-template-rows: 1fr 1fr; }
 #staff {
-  align-self: start;
-  justify-self: end;
+  flex: 0 0 auto;
   width: 72px;
   height: 44px;
   background: transparent;
@@ -172,6 +171,28 @@ button {
   line-height: 1.1;
   padding: 2px;
 }
+.staff-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-height: 0;
+}
+#mute-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 6px 4px;
+  border: 3px solid #000;
+  border-radius: 10px;
+  background: #FFFFFF;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+}
+#mute-indicator[hidden] { display: none; }
+#mute-indicator svg { width: 40px; height: 40px; fill: #000; }
 #staff.holding {
   width: 110px;
   height: 56px;
