@@ -18,9 +18,9 @@ No adverts, no tracking, no sounds except speech, no animations.
 ## Using it
 
 - **Sentence strip** (top): shows chosen words in their colours. Tap it to hear the whole sentence.
-  It holds up to 12 words (6 per row). It never clears by itself.
+  It holds up to 12 words (6 per row). It only clears when you press Clear or Home.
 - **Delete last word** and **Clear** sit beside the strip.
-- **Home** (left) goes back to the first screen. It does not clear the sentence.
+- **Home** (left) goes back to the first screen and clears the sentence.
 - **Arrows** appear only when a screen has more words than fit. Words never change position.
 - **Bottom bar**: help, stop, more, finished, yes, no. They speak and join the sentence, and never change screen.
 

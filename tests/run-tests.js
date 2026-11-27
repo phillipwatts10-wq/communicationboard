@@ -218,13 +218,18 @@ async function testEveryButton(browser, vp, gridSize) {
   await page.click("#delete-last");
   check(JSON.stringify(await sentenceOf(page)) === '["i","want","apple"]', tag + ": Delete last word removes one");
 
-  // Home does not clear.
-  await page.click("#home");
-  check((await sentenceOf(page)).length === 3, tag + ": Home does not clear sentence");
-  check(await screenOf(page) === "home", tag + ": Home goes to Home screen");
-
   await page.click("#clear");
   check((await sentenceOf(page)).length === 0, tag + ": Clear empties sentence");
+
+  // Home clears the sentence and goes to the Home screen.
+  await page.click('#fixed-bar [data-word="yes"]');
+  await page.click('#fixed-bar [data-word="more"]');
+  check((await sentenceOf(page)).length === 2, tag + ": sentence built before Home");
+  const speaksBefore = await speakCount(page);
+  await page.click("#home");
+  check((await sentenceOf(page)).length === 0, tag + ": Home clears the sentence");
+  check(await screenOf(page) === "home", tag + ": Home goes to Home screen");
+  check(await speakCount(page) === speaksBefore, tag + ": Home does not speak");
 
   // A new press stops earlier speech: cancel logged before every speak.
   const ok = await page.evaluate(() => window.__log.every((l, i) => l.type !== "speak" || (i > 0 && window.__log[i - 1].type === "cancel")));
@@ -464,34 +469,31 @@ async function testLongSentence(browser) {
         check(c.fits, vp.name + " " + label + ": strip word " + c.id + " readable (not cut off)");
       });
     };
-    // Longest words, one row (6 words).
-    await goToScreen(page, "games");
-    for (const w of ["matching_game", "board_game", "ipad_game"]) await page.click('#grid [data-word="' + w + '"]');
-    await goToScreenKeep(page, "places");
-    for (const w of ["playground", "library", "garden"]) await page.click('#grid [data-word="' + w + '"]');
-    await stripCheck("6 words");
+    const press = async (list) => { for (const w of list) await page.click('#grid [data-word="' + w + '"]'); };
+
+    // Round 1: longest game words. "I want" + 4 games = 6 words (one row).
+    await page.click("#home");
+    await press(["i", "want", "games", "matching_game", "board_game", "ipad_game", "chase"]);
+    check((await sentenceOf(page)).length === 6, vp.name + ": 6-word sentence built");
+    await stripCheck("6 words (games)");
     await page.screenshot({ path: path.join(SHOTS, "sentence-6-words-" + vp.name + ".png") });
-    // Two rows (12 words), then try to add more.
-    for (const w of ["playground", "library", "garden", "playground", "library", "garden", "hall", "hall"]) await page.click('#grid [data-word="' + w + '"]');
+    await press(["matching_game", "board_game", "matching_game", "board_game", "ipad_game", "matching_game"]);
+    await stripCheck("12 words (games)");
+    await page.screenshot({ path: path.join(SHOTS, "sentence-12-words-" + vp.name + ".png") });
+
+    // Round 2: Home clears, then place words including "playground".
+    await page.click("#home");
+    check((await sentenceOf(page)).length === 0, vp.name + ": Home cleared the long sentence");
+    await press(["i", "want", "places", "playground", "library", "garden", "hall"]);
+    await stripCheck("6 words (places)");
+    await press(["playground", "playground", "playground", "playground", "playground", "playground", "hall", "hall"]);
     const n = (await sentenceOf(page)).length;
     check(n === 12, vp.name + ": sentence capped at 12 words (got " + n + ")");
-    await stripCheck("12 words");
-    await page.screenshot({ path: path.join(SHOTS, "sentence-12-words-" + vp.name + ".png") });
+    await stripCheck("12 words (places)");
     // Pressing still speaks even when the strip is full.
     check((await lastSpoken(page)).text === "hall", vp.name + ": word still speaks when strip is full");
     await context.close();
   }
-}
-
-async function goToScreenKeep(page, sid) {
-  await page.click("#home");
-  // Navigate using category-only routes where possible (want → category).
-  await page.evaluate(() => {});
-  const route = PATHS[sid];
-  for (const wid of route) await page.click('#grid [data-word="' + wid + '"]');
-  // Remove the words added by navigating (I, want) so only chosen words remain.
-  const added = route.filter((w) => BOARD.words[w].type !== "category").length;
-  for (let i = 0; i < added; i++) await page.click("#delete-last");
 }
 
 // ---------- helpers for staff tests ----------

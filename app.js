@@ -429,8 +429,12 @@
     drawStrip();
   });
 
+  // Home goes to the first screen and clears the sentence strip.
+  // (Speech already playing is allowed to finish.)
   $("home").addEventListener("click", () => {
     if (!acceptPress()) return;
+    state.sentence = [];
+    drawStrip();
     goTo(board.homeScreen);
   });
 
