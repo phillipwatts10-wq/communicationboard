@@ -38,6 +38,79 @@
     return;
   }
 
+  // ---------- Staff-added words (saved on this iPad only) ----------
+  // Stored separately from data/board.js. Each page keeps a list of
+  // added words after its built-in words. A deleted word leaves an
+  // empty space (null) so nothing else moves; the next new word on
+  // that page fills the first empty space.
+  const customKey = "commboard.custom." + board.id;
+  const baseSlots = {};
+  Object.keys(board.screens).forEach((sid) => { baseSlots[sid] = board.screens[sid].slots.slice(); });
+  let custom = loadCustom();
+  applyCustom();
+
+  function loadCustom() {
+    let c = null;
+    try { c = JSON.parse(localStorage.getItem(customKey)); } catch (e) { c = null; }
+    if (!c || typeof c !== "object") c = {};
+    if (!c.words || typeof c.words !== "object") c.words = {};
+    if (!c.slots || typeof c.slots !== "object") c.slots = {};
+    return c;
+  }
+
+  function saveCustom() {
+    try {
+      localStorage.setItem(customKey, JSON.stringify(custom));
+    } catch (e) {
+      return false; // storage full or blocked
+    }
+    // Ask Safari to keep this data (it may otherwise clear it after weeks unused).
+    try {
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    } catch (e) { /* not supported */ }
+    return true;
+  }
+
+  function applyCustom() {
+    Object.keys(board.words).forEach((id) => { if (board.words[id].custom) delete board.words[id]; });
+    Object.keys(custom.words).forEach((id) => {
+      const w = custom.words[id];
+      if (!w || !w.label) return;
+      board.words[id] = {
+        label: String(w.label),
+        speak: w.speak ? String(w.speak) : "",
+        colour: board.colours[w.colour] ? w.colour : "white",
+        image: w.image ? String(w.image) : "",
+        custom: true
+      };
+    });
+    Object.keys(board.screens).forEach((sid) => {
+      const extra = (custom.slots[sid] || []).map((id) => (id && board.words[id] ? id : null));
+      while (extra.length && extra[extra.length - 1] === null) extra.pop();
+      board.screens[sid].slots = baseSlots[sid].concat(extra);
+    });
+  }
+
+  function placeWord(id, sid) {
+    const list = custom.slots[sid] || (custom.slots[sid] = []);
+    const gap = list.indexOf(null);
+    if (gap !== -1) list[gap] = id;
+    else list.push(id);
+  }
+
+  function unplaceWord(id) {
+    Object.keys(custom.slots).forEach((sid) => {
+      const list = custom.slots[sid];
+      const i = list.indexOf(id);
+      if (i !== -1) list[i] = null;
+      while (list.length && list[list.length - 1] === null) list.pop();
+    });
+  }
+
+  function pageOfCustom(id) {
+    return Object.keys(custom.slots).find((sid) => custom.slots[sid].indexOf(id) !== -1) || null;
+  }
+
   function checkBoard(b) {
     const out = [];
     const words = b.words || {};
@@ -194,11 +267,17 @@
       const img = document.createElement("img");
       img.alt = "";
       img.draggable = false;
-      img.src = (board.imageFolder || "images/") + word.image;
+      img.src = imageSrc(word.image);
       img.onerror = () => img.remove(); // missing file: keep the empty space
       box.appendChild(img);
     }
     return box;
+  }
+
+  // Photos added by staff are stored as data (they start "data:");
+  // built-in symbols are file names in the images folder.
+  function imageSrc(image) {
+    return image.indexOf("data:") === 0 ? image : (board.imageFolder || "images/") + image;
   }
 
   function makeLabel(word) {
@@ -368,15 +447,52 @@
   });
 
   // ---------- Staff button: long press ----------
+  // Uses touch events on iPad (more reliable than pointer events, which
+  // Safari cancels if the finger moves slightly) and mouse events elsewhere.
   const staffBtn = $("staff");
+  const STAFF_LABEL = staffBtn.textContent;
+  const MOVE_LIMIT = 40; // pixels the finger may drift while holding
   let holdTimer = null;
-  function cancelHold() { clearTimeout(holdTimer); holdTimer = null; }
-  staffBtn.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
+  let holdStart = null;
+
+  function startHold(x, y) {
     cancelHold();
-    holdTimer = setTimeout(() => { holdTimer = null; openAdultCheck(); }, LONG_PRESS_MS);
-  });
-  ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => staffBtn.addEventListener(ev, cancelHold));
+    holdStart = { x, y };
+    staffBtn.textContent = "Keep holding…";
+    staffBtn.classList.add("holding");
+    holdTimer = setTimeout(() => {
+      cancelHold();
+      openAdultCheck();
+    }, LONG_PRESS_MS);
+  }
+  function moveHold(x, y) {
+    if (!holdStart) return;
+    if (Math.abs(x - holdStart.x) > MOVE_LIMIT || Math.abs(y - holdStart.y) > MOVE_LIMIT) cancelHold();
+  }
+  function cancelHold() {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+    holdStart = null;
+    staffBtn.textContent = STAFF_LABEL;
+    staffBtn.classList.remove("holding");
+  }
+
+  staffBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault(); // stops Safari's copy/select pop-up and mouse emulation
+    const t = e.changedTouches[0];
+    startHold(t.clientX, t.clientY);
+  }, { passive: false });
+  staffBtn.addEventListener("touchmove", (e) => {
+    const t = e.changedTouches[0];
+    moveHold(t.clientX, t.clientY);
+  }, { passive: true });
+  staffBtn.addEventListener("touchend", cancelHold);
+  staffBtn.addEventListener("touchcancel", cancelHold);
+
+  staffBtn.addEventListener("mousedown", (e) => startHold(e.clientX, e.clientY));
+  staffBtn.addEventListener("mousemove", (e) => moveHold(e.clientX, e.clientY));
+  staffBtn.addEventListener("mouseup", cancelHold);
+  staffBtn.addEventListener("mouseleave", cancelHold);
   staffBtn.addEventListener("contextmenu", (e) => e.preventDefault());
 
   // ---------- Adult check (a simple sum, NOT security) ----------
@@ -445,6 +561,7 @@
     $("delay").value = String(settings.pressDelayMs);
     $("delay-value").textContent = (settings.pressDelayMs / 1000).toFixed(2) + " seconds";
     fillFixedToggles();
+    drawMyWords();
   }
 
   function fillVoiceList() {
@@ -536,6 +653,266 @@
   });
 
   $("close-settings").addEventListener("click", closeSettings);
+
+  // ---------- My words: list ----------
+  function drawMyWords() {
+    const box = $("my-words");
+    box.replaceChildren();
+    const ids = Object.keys(custom.words);
+    if (!ids.length) {
+      const p = document.createElement("p");
+      p.className = "hint";
+      p.textContent = "No words added yet.";
+      box.appendChild(p);
+      return;
+    }
+    // Order: by page (board order), then position on the page.
+    const screenOrder = Object.keys(board.screens);
+    const rank = (id) => {
+      const sid = pageOfCustom(id);
+      return sid ? screenOrder.indexOf(sid) * 1000 + custom.slots[sid].indexOf(id) : 1e9;
+    };
+    ids.sort((a, b) => rank(a) - rank(b)).forEach((id) => {
+      const w = board.words[id];
+      if (!w) return;
+      const row = document.createElement("div");
+      row.className = "my-word-row";
+      row.dataset.word = id;
+      const sym = makeSymbol(w);
+      paint(sym, w.colour);
+      sym.style.backgroundColor = "#fff";
+      const info = document.createElement("div");
+      info.className = "info";
+      info.textContent = w.label;
+      const small = document.createElement("small");
+      const sid = pageOfCustom(id);
+      small.textContent = "Page: " + (sid ? board.screens[sid].title : "none");
+      info.appendChild(small);
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.dataset.edit = id;
+      edit.textContent = "Change";
+      row.append(sym, info, edit);
+      box.appendChild(row);
+    });
+  }
+
+  $("add-word").addEventListener("click", () => openEditor(null));
+  $("my-words").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-edit]");
+    if (b) openEditor(b.dataset.edit);
+  });
+
+  // ---------- My words: add / change / delete ----------
+  const editor = { id: null, colour: "white", image: "", deleteArmed: false };
+
+  function openEditor(id) {
+    const w = id ? custom.words[id] : null;
+    editor.id = id;
+    editor.colour = w && board.colours[w.colour] ? w.colour : "white";
+    editor.image = w && w.image ? w.image : "";
+    editor.deleteArmed = false;
+    $("we-title").textContent = id ? "Change a word" : "Add a word";
+    $("we-label").value = w ? w.label : "";
+    $("we-speak").value = w && w.speak ? w.speak : "";
+    $("we-message").textContent = "";
+    $("we-delete").hidden = !id;
+    $("we-delete").textContent = "Delete word";
+    $("we-symbols").hidden = true;
+
+    const sel = $("we-screen");
+    sel.replaceChildren();
+    Object.keys(board.screens).forEach((sid) => {
+      const o = document.createElement("option");
+      o.value = sid;
+      o.textContent = board.screens[sid].title + " page";
+      sel.appendChild(o);
+    });
+    sel.value = (id && pageOfCustom(id)) || state.screen;
+
+    drawSwatches();
+    drawPreview();
+    $("word-editor").hidden = false;
+  }
+
+  function closeEditor() {
+    $("word-editor").hidden = true;
+    $("we-photo").value = "";
+  }
+
+  function drawSwatches() {
+    const box = $("we-colours");
+    box.replaceChildren();
+    Object.keys(board.colours).forEach((name) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.colour = name;
+      b.textContent = name;
+      paint(b, name);
+      b.setAttribute("aria-pressed", String(name === editor.colour));
+      box.appendChild(b);
+    });
+  }
+
+  function drawPreview() {
+    const box = $("we-preview");
+    box.replaceChildren();
+    if (editor.image) {
+      const img = document.createElement("img");
+      img.alt = "Chosen picture";
+      img.src = imageSrc(editor.image);
+      box.appendChild(img);
+    } else {
+      box.textContent = "No picture";
+    }
+  }
+
+  function drawSymbolPicker() {
+    const box = $("we-symbols");
+    box.replaceChildren();
+    const seen = {};
+    Object.keys(board.words)
+      .filter((id) => !board.words[id].custom && board.words[id].image)
+      .sort((a, b) => board.words[a].label.localeCompare(board.words[b].label))
+      .forEach((id) => {
+        const file = board.words[id].image;
+        if (seen[file]) return;
+        seen[file] = true;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.symbol = file;
+        b.setAttribute("aria-label", board.words[id].label);
+        const img = document.createElement("img");
+        img.alt = "";
+        img.src = imageSrc(file);
+        b.appendChild(img);
+        box.appendChild(b);
+      });
+  }
+
+  // Shrinks a photo so it fits easily in the iPad's storage.
+  function shrinkPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const max = 320;
+        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+      img.src = url;
+    });
+  }
+
+  $("we-colours").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-colour]");
+    if (!b) return;
+    editor.colour = b.dataset.colour;
+    drawSwatches();
+  });
+
+  $("we-photo").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    $("we-message").textContent = "";
+    shrinkPhoto(file).then((dataUrl) => {
+      editor.image = dataUrl;
+      $("we-symbols").hidden = true;
+      drawPreview();
+    }).catch(() => {
+      $("we-message").textContent = "That photo could not be used. Please try another.";
+    });
+  });
+
+  $("we-pick-symbol").addEventListener("click", () => {
+    const box = $("we-symbols");
+    if (box.hidden) drawSymbolPicker();
+    box.hidden = !box.hidden;
+  });
+
+  $("we-symbols").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-symbol]");
+    if (!b) return;
+    editor.image = b.dataset.symbol;
+    $("we-symbols").hidden = true;
+    drawPreview();
+  });
+
+  $("we-no-picture").addEventListener("click", () => {
+    editor.image = "";
+    $("we-symbols").hidden = true;
+    drawPreview();
+  });
+
+  $("we-listen").addEventListener("click", () => {
+    speak($("we-speak").value.trim() || $("we-label").value.trim());
+  });
+
+  $("we-save").addEventListener("click", () => {
+    const label = $("we-label").value.trim();
+    if (!label) {
+      $("we-message").textContent = "Please type the word for the button.";
+      return;
+    }
+    const sid = $("we-screen").value;
+    const record = { label, speak: $("we-speak").value.trim(), colour: editor.colour, image: editor.image };
+    const before = JSON.stringify(custom);
+    let id = editor.id;
+    if (!id) {
+      id = "custom_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      custom.words[id] = record;
+      placeWord(id, sid);
+    } else {
+      custom.words[id] = record;
+      if (pageOfCustom(id) !== sid) {
+        unplaceWord(id);
+        placeWord(id, sid);
+      }
+    }
+    if (!saveCustom()) {
+      custom = JSON.parse(before);
+      $("we-message").textContent = "There is no room to save this on the iPad. Try a different photo, or delete some of your words.";
+      return;
+    }
+    wordsChanged();
+    closeEditor();
+  });
+
+  $("we-delete").addEventListener("click", () => {
+    if (!editor.id) return;
+    if (!editor.deleteArmed) {
+      editor.deleteArmed = true;
+      $("we-delete").textContent = "Press again to delete";
+      return;
+    }
+    delete custom.words[editor.id];
+    unplaceWord(editor.id);
+    saveCustom();
+    wordsChanged();
+    closeEditor();
+  });
+
+  $("we-cancel").addEventListener("click", closeEditor);
+
+  function wordsChanged() {
+    applyCustom();
+    // A deleted word cannot stay in the sentence strip.
+    state.sentence = state.sentence.filter((id) => board.words[id]);
+    drawGrid();
+    drawStrip();
+    drawMyWords();
+  }
 
   // ---------- Stop iPad zoom / scroll bounce ----------
   document.addEventListener("gesturestart", (e) => e.preventDefault());

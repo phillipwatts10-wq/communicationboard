@@ -22,7 +22,7 @@ const VIEWPORTS = [
 const GRID_SIZES = [8, 12];
 
 // ---------- tiny local web server ----------
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml" };
 function startServer() {
   const server = http.createServer((req, res) => {
     const p = path.join(ROOT, decodeURIComponent(req.url.split("?")[0]));
@@ -208,7 +208,12 @@ async function testEveryButton(browser, vp, gridSize) {
   await page.screenshot({ path: path.join(SHOTS, vp.name + "-grid" + gridSize + "-sentence.png") });
 
   await page.click("#strip");
-  check((await lastSpoken(page)).text === "I want apple banana", tag + ": strip speaks whole sentence");
+  check((await lastSpoken(page)).text === "eye want apple banana", tag + ": strip speaks whole sentence (I said as 'eye')");
+
+  // Every visible button shows its symbol picture (loaded, not broken).
+  const pics = await page.$$eval("#grid .word-btn, #fixed-bar .word-btn, .strip-card", (els) =>
+    els.map((e) => { const i = e.querySelector(".symbol img"); return { id: e.dataset.word, ok: !!i && i.complete && i.naturalWidth > 0 }; }));
+  pics.forEach((p) => check(p.ok, tag + ": " + p.id + " shows its symbol"));
 
   await page.click("#delete-last");
   check(JSON.stringify(await sentenceOf(page)) === '["i","want","apple"]', tag + ": Delete last word removes one");
@@ -489,6 +494,173 @@ async function goToScreenKeep(page, sid) {
   for (let i = 0; i < added; i++) await page.click("#delete-last");
 }
 
+// ---------- helpers for staff tests ----------
+async function touchHold(page, ms, driftPx) {
+  const box = await (await page.$("#staff")).boundingBox();
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  await page.waitForTimeout(400);
+  const holdingText = await page.textContent("#staff");
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x + driftPx, y: y + driftPx / 2 }] });
+  await page.waitForTimeout(ms - 400);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+  return holdingText;
+}
+
+async function solveSum(page) {
+  const q = await page.textContent("#adult-question");
+  const [, a, b] = q.match(/(\d+) \+ (\d+)/);
+  for (const ch of String(Number(a) + Number(b))) await page.click('[data-key="' + ch + '"]');
+  await page.click('[data-key="ok"]');
+}
+
+async function openSettings(page) {
+  await touchHold(page, 3300, 0);
+  await solveSum(page);
+}
+
+// ---------- TEST 7: Staff button with a real touch hold ----------
+async function testStaffTouch(browser) {
+  const { page, context } = await newPage(browser, VIEWPORTS[0], { pressDelayMs: 0 });
+  const t1 = await touchHold(page, 1200, 0);
+  check(t1.indexOf("Keep holding") !== -1, "Staff touch: shows 'Keep holding…' while held");
+  await page.waitForTimeout(2500);
+  check(await page.isHidden("#adult-check"), "Staff touch: short hold does not open");
+  check((await page.textContent("#staff")).trim() === "Staff", "Staff touch: label goes back after letting go");
+  await touchHold(page, 3300, 12);
+  check(await page.isVisible("#adult-check"), "Staff touch: 3 s hold with a slightly moving finger opens check");
+  await page.click("#adult-cancel");
+  await touchHold(page, 3300, 90);
+  check(await page.isHidden("#adult-check"), "Staff touch: sliding the finger away cancels");
+  await context.close();
+}
+
+// ---------- TEST 8: My words ----------
+async function testMyWords(browser) {
+  const vp = VIEWPORTS[0];
+  const { page, context, errors } = await newPage(browser, vp, { pressDelayMs: 0, gridSize: 8 });
+  const addWord = async (label, opts = {}) => {
+    await page.click("#add-word");
+    await page.fill("#we-label", label);
+    if (opts.speak) await page.fill("#we-speak", opts.speak);
+    if (opts.colour) await page.click('#we-colours [data-colour="' + opts.colour + '"]');
+    if (opts.screen) await page.selectOption("#we-screen", opts.screen);
+    if (opts.symbol) { await page.click("#we-pick-symbol"); await page.click('#we-symbols [data-symbol="' + opts.symbol + '"]'); }
+    if (opts.photo) await page.setInputFiles("#we-photo", opts.photo);
+    if (opts.photo) await page.waitForFunction(() => !!document.querySelector("#we-preview img"));
+    await page.click("#we-save");
+  };
+
+  // Go to Food, open settings: the page picker should default to Food.
+  await goToScreen(page, "food");
+  await openSettings(page);
+  check(await page.isVisible("#settings"), "My words: settings open");
+  check((await page.textContent("#my-words")).indexOf("No words added yet") !== -1, "My words: empty to start");
+
+  await page.click("#add-word");
+  check(await page.inputValue("#we-screen") === "food", "My words: page defaults to the page you were on");
+  // Saving with no word is refused.
+  await page.click("#we-save");
+  check((await page.textContent("#we-message")).length > 0 && await page.isVisible("#word-editor"), "My words: empty word refused");
+  // Typing works.
+  await page.fill("#we-label", "pizza");
+  check(await page.inputValue("#we-label") === "pizza", "My words: typing into the word box works");
+  await page.click("#we-cancel");
+
+  // Make a photo to upload (a screenshot of a symbol).
+  await page.goto(BASE + "images/apple.svg");
+  const photo = { name: "photo.png", mimeType: "image/png", buffer: await page.screenshot() };
+  await page.goto(BASE);
+  await goToScreen(page, "food");
+  await openSettings(page);
+
+  await addWord("pizza", { colour: "green", symbol: "sandwich.svg" });
+  await addWord("pasta", { colour: "orange", photo, speak: "pasta please" });
+  await addWord("rice", { colour: "green" });
+  check(await page.isHidden("#word-editor"), "My words: editor closes after saving");
+  const rows = await page.$$eval(".my-word-row", (r) => r.map((x) => x.querySelector(".info").firstChild.textContent));
+  check(JSON.stringify(rows) === '["pizza","pasta","rice"]', "My words: list shows added words in order (" + rows + ")");
+  await page.screenshot({ path: path.join(SHOTS, "my-words-list.png") });
+  await page.click("#close-settings");
+
+  // Food now: 6 built-in + pizza, pasta on page 1; rice on page 2.
+  const ids = await page.$$eval("#grid > *", (els) => els.map((e) => e.dataset.word || null));
+  check(ids[6] && ids[6].indexOf("custom_") === 0 && ids[7] && ids[7].indexOf("custom_") === 0, "My words: new words fill the next spaces");
+  check(await page.$eval("#next", (e) => getComputedStyle(e).visibility) === "visible", "My words: full page shows next arrow");
+  await page.screenshot({ path: path.join(SHOTS, "my-words-on-food.png") });
+  const label = (i) => page.$eval("#grid > :nth-child(" + (i + 1) + ") .label", (e) => e.textContent);
+  check(await label(6) === "pizza" && await label(7) === "pasta", "My words: pizza and pasta in places 7 and 8");
+  const pastaImg = await page.$eval("#grid > :nth-child(8) img", (i) => ({ src: i.src.slice(0, 14), ok: i.naturalWidth > 0 }));
+  check(pastaImg.src === "data:image/jpe" && pastaImg.ok, "My words: photo shown on button");
+  const pizzaBg = await page.$eval("#grid > :nth-child(7)", (e) => getComputedStyle(e).backgroundColor);
+  check(pizzaBg === hexToRgb(BOARD.colours.green.background), "My words: chosen colour used");
+
+  // Pressing an added word speaks it, joins, stays.
+  await page.click("#clear");
+  await page.click("#grid > :nth-child(8)");
+  check((await lastSpoken(page)).text === "pasta please", "My words: 'say it as' is spoken");
+  check((await sentenceOf(page)).length === 1 && await screenOf(page) === "food", "My words: joins sentence and stays on page");
+  await page.click("#next");
+  check(await label(0) === "rice", "My words: third word on page 2");
+  await page.click("#prev");
+
+  // Kept after reload.
+  await page.reload();
+  await goToScreen(page, "food");
+  check(await label(6) === "pizza" && await label(7) === "pasta", "My words: kept after reload");
+
+  // Change pizza's word, delete pasta (needs two presses), sentence loses pasta.
+  await page.click("#grid > :nth-child(8)");
+  await openSettings(page);
+  await page.click('.my-word-row:nth-child(1) [data-edit]');
+  check(await page.inputValue("#we-label") === "pizza", "My words: Change opens the word");
+  await page.fill("#we-label", "pizza slice");
+  await page.click("#we-save");
+  await page.click('.my-word-row:nth-child(2) [data-edit]');
+  await page.click("#we-delete");
+  check(await page.isVisible("#word-editor") && (await page.textContent("#we-delete")).indexOf("again") !== -1, "My words: delete asks for a second press");
+  await page.click("#we-delete");
+  await page.click("#close-settings");
+  check(await label(6) === "pizza slice", "My words: changed word shown");
+  const after = await page.$$eval("#grid > *", (els) => els.map((e) => e.className));
+  check(after[7] === "empty-slot", "My words: deleted word leaves an empty space (nothing moves)");
+  check((await sentenceOf(page)).length === 0, "My words: deleted word removed from sentence");
+  await page.click("#next");
+  check(await label(0) === "rice", "My words: rice did not move after delete");
+  await page.click("#prev");
+
+  // A new word fills the gap.
+  await openSettings(page);
+  await addWord("chips", { colour: "green" });
+  await page.click("#close-settings");
+  check(await label(7) === "chips", "My words: new word fills the empty space");
+
+  // Move rice to the feel page.
+  await openSettings(page);
+  const riceRow = await page.$$eval(".my-word-row", (r) => r.findIndex((x) => x.textContent.indexOf("rice") === 0));
+  await page.click(".my-word-row:nth-child(" + (riceRow + 1) + ") [data-edit]");
+  await page.selectOption("#we-screen", "feel");
+  await page.click("#we-save");
+  await page.click("#close-settings");
+  check(await page.$eval("#next", (e) => getComputedStyle(e).visibility) === "hidden", "My words: Food back to one page after moving rice");
+  await goToScreen(page, "feel");
+  check(await label(6) === "rice", "My words: rice moved to feel page");
+
+  // Built-in words untouched; adding words did not change grid count.
+  check((await page.$$("#grid > *")).length === 8, "My words: grid still 8 spaces");
+  check(errors.length === 0, "My words: no page errors (" + errors.join("; ") + ")");
+  await page.screenshot({ path: path.join(SHOTS, "my-words-feel.png") });
+
+  // Editor screenshot with symbol picker open.
+  await openSettings(page);
+  await page.click("#add-word");
+  await page.click("#we-pick-symbol");
+  await page.screenshot({ path: path.join(SHOTS, "word-editor.png") });
+  await context.close();
+}
+
 // ---------- run ----------
 let BASE;
 (async () => {
@@ -502,6 +674,8 @@ let BASE;
     await testPaging(browser);
     await testCalmAndPrivate(browser);
     await testLongSentence(browser);
+    await testStaffTouch(browser);
+    await testMyWords(browser);
   } catch (e) {
     failures.push("Test crashed: " + e.stack);
   }

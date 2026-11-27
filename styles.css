@@ -168,6 +168,16 @@ button {
   color: #3A3A3A;
   font-size: 15px;
   font-weight: 600;
+  touch-action: none;   /* Safari must not treat a hold here as a scroll */
+  line-height: 1.1;
+  padding: 2px;
+}
+#staff.holding {
+  width: 110px;
+  height: 56px;
+  background: #FFFFFF;
+  border-color: #000000;
+  color: #000000;
 }
 
 /* ---------- Main grid ---------- */
@@ -217,14 +227,21 @@ button {
   justify-content: center;
   min-height: 0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.45);
-  border: 2px solid rgba(0, 0, 0, 0.15);
+  background: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  padding: 3px;
 }
+/* The picture fills the symbol space but never changes the button's size. */
+.symbol { position: relative; }
 .symbol img {
-  max-width: 100%;
-  max-height: 100%;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
   object-fit: contain;
+  pointer-events: none;
 }
 
 /* ---------- Fixed bar ---------- */
@@ -356,6 +373,73 @@ input[type="range"] { width: 100%; height: 44px; margin-bottom: 10px; }
   padding-top: 14px;
 }
 .settings-actions button { flex: 1; }
+
+/* ---------- My words / word editor ---------- */
+.hint { margin: 0 0 10px; font-size: 17px; color: #333; }
+
+#word-editor { z-index: 110; }
+
+input[type="text"] {
+  width: 100%;
+  font-size: 22px;          /* 16px or more stops iPad zooming in */
+  min-height: 56px;
+  padding: 0 12px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  margin-bottom: 10px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.my-words { margin-top: 10px; display: grid; gap: 8px; }
+.my-word-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  padding: 6px;
+}
+.my-word-row .symbol { width: 64px; height: 64px; border-width: 3px; }
+.my-word-row .info { font-size: 20px; font-weight: 700; min-width: 0; }
+.my-word-row .info small { display: block; font-weight: 400; font-size: 16px; }
+.my-word-row button { min-width: 100px; }
+
+.swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.swatches button { min-height: 64px; font-size: 16px; }
+.swatches button[aria-pressed="true"] { outline: 5px solid #000; outline-offset: 3px; }
+
+.picture-row { display: grid; grid-template-columns: 140px 1fr; gap: 14px; align-items: start; }
+.picture-preview {
+  width: 140px; height: 140px;
+  border: 3px solid var(--ink); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; background: #fff; font-size: 16px; color: #555; text-align: center;
+}
+.picture-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.picture-buttons { display: grid; gap: 10px; }
+.file-button {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60px;
+  border: 3px solid var(--ink); border-radius: 10px;
+  font-size: 22px; font-weight: 700; background: #fff; cursor: pointer;
+}
+.file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.symbol-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.modal-box .symbol-picker button { min-height: 0; padding: 4px; aspect-ratio: 1; }
+.symbol-picker img { width: 100%; height: 100%; object-fit: contain; }
+
+#we-delete { color: #B00020; border-color: #B00020; }
+#we-delete[hidden] { display: none; }
 
 /* ---------- Data file problem message ---------- */
 .fatal {

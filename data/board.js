@@ -32,6 +32,9 @@
              Use null for a deliberately empty space.
   fixedBar – the keys along the bottom, in order.
 
+  Words that staff add on the iPad (Staff → My words) are NOT
+  stored in this file. They are saved on that iPad only.
+
   ------------------------------------------------------------
   FUTURE (not built yet)
   ------------------------------------------------------------
@@ -72,9 +75,11 @@ window.COMMUNICATION_DATA = {
       name: "Example board",
       owner: { schoolId: "example-school", classId: "example-class", studentId: "example-student" },
 
-      // Images: change showImages to true once you have put the
-      // symbol files into the "images" folder.
-      showImages: false,
+      // Symbols are SVG files in the "images" folder (drawn by
+      // tools/make-symbols.py). You can replace any file with your own
+      // picture – keep the same name, or change the name below.
+      // Set showImages to false to show words only.
+      showImages: true,
       imageFolder: "images/",
 
       // The first screen, shown when Home is pressed.
@@ -122,84 +127,85 @@ window.COMMUNICATION_DATA = {
       // ---------- WORDS ----------
       words: {
         // Home
-        i:    { label: "I",    colour: "orange", image: "i.png",    opens: "i" },
+        // speak "eye": the iPad voice reads a lone "I" as "capital I".
+        i:    { label: "I", speak: "eye", colour: "orange", image: "i.svg", opens: "i" },
 
         // Layer after I
-        want: { label: "want", colour: "yellow", image: "want.png", opens: "want" },
-        need: { label: "need", colour: "yellow", image: "need.png", opens: "need" },
-        feel: { label: "feel", colour: "yellow", image: "feel.png", opens: "feel" },
+        want: { label: "want", colour: "yellow", image: "want.svg", opens: "want" },
+        need: { label: "need", colour: "yellow", image: "need.svg", opens: "need" },
+        feel: { label: "feel", colour: "yellow", image: "feel.svg", opens: "feel" },
 
         // Categories (open a page only – do not speak or join)
-        food:       { label: "Food",       type: "category", colour: "white", image: "food.png",       opens: "food" },
-        drinks:     { label: "Drinks",     type: "category", colour: "white", image: "drinks.png",     opens: "drinks" },
-        toys:       { label: "Toys",       type: "category", colour: "white", image: "toys.png",       opens: "toys" },
-        games:      { label: "Games",      type: "category", colour: "white", image: "games.png",      opens: "games" },
-        activities: { label: "Activities", type: "category", colour: "white", image: "activities.png", opens: "activities" },
-        places:     { label: "Places",     type: "category", colour: "white", image: "places.png",     opens: "places" },
+        food:       { label: "Food",       type: "category", colour: "white", image: "food.svg",       opens: "food" },
+        drinks:     { label: "Drinks",     type: "category", colour: "white", image: "drinks.svg",     opens: "drinks" },
+        toys:       { label: "Toys",       type: "category", colour: "white", image: "toys.svg",       opens: "toys" },
+        games:      { label: "Games",      type: "category", colour: "white", image: "games.svg",      opens: "games" },
+        activities: { label: "Activities", type: "category", colour: "white", image: "activities.svg", opens: "activities" },
+        places:     { label: "Places",     type: "category", colour: "white", image: "places.svg",     opens: "places" },
 
         // need
-        toilet_need: { label: "toilet", colour: "yellow", image: "toilet.png" },
-        break:       { label: "break",  colour: "yellow", image: "break.png" },
-        drink:       { label: "drink",  colour: "yellow", image: "drink.png", opens: "drinks" },
-        quiet:       { label: "quiet",  colour: "purple", image: "quiet.png" },
+        toilet_need: { label: "toilet", colour: "yellow", image: "toilet.svg" },
+        break:       { label: "break",  colour: "yellow", image: "break.svg" },
+        drink:       { label: "drink",  colour: "yellow", image: "drink.svg", opens: "drinks" },
+        quiet:       { label: "quiet",  colour: "purple", image: "quiet.svg" },
 
         // feel
-        happy:   { label: "happy",   colour: "purple", image: "happy.png" },
-        sad:     { label: "sad",     colour: "purple", image: "sad.png" },
-        angry:   { label: "angry",   colour: "purple", image: "angry.png" },
-        tired:   { label: "tired",   colour: "purple", image: "tired.png" },
-        worried: { label: "worried", colour: "purple", image: "worried.png" },
-        calm:    { label: "calm",    colour: "purple", image: "calm.png" },
+        happy:   { label: "happy",   colour: "purple", image: "happy.svg" },
+        sad:     { label: "sad",     colour: "purple", image: "sad.svg" },
+        angry:   { label: "angry",   colour: "purple", image: "angry.svg" },
+        tired:   { label: "tired",   colour: "purple", image: "tired.svg" },
+        worried: { label: "worried", colour: "purple", image: "worried.svg" },
+        calm:    { label: "calm",    colour: "purple", image: "calm.svg" },
 
         // Food
-        apple:    { label: "apple",    colour: "green", image: "apple.png" },
-        banana:   { label: "banana",   colour: "green", image: "banana.png" },
-        biscuit:  { label: "biscuit",  colour: "green", image: "biscuit.png" },
-        crisps:   { label: "crisps",   colour: "green", image: "crisps.png" },
-        sandwich: { label: "sandwich", colour: "green", image: "sandwich.png" },
-        yoghurt:  { label: "yoghurt",  colour: "green", image: "yoghurt.png" },
+        apple:    { label: "apple",    colour: "green", image: "apple.svg" },
+        banana:   { label: "banana",   colour: "green", image: "banana.svg" },
+        biscuit:  { label: "biscuit",  colour: "green", image: "biscuit.svg" },
+        crisps:   { label: "crisps",   colour: "green", image: "crisps.svg" },
+        sandwich: { label: "sandwich", colour: "green", image: "sandwich.svg" },
+        yoghurt:  { label: "yoghurt",  colour: "green", image: "yoghurt.svg" },
 
         // Drinks
-        water:  { label: "water",  colour: "green", image: "water.png" },
-        juice:  { label: "juice",  colour: "green", image: "juice.png" },
-        milk:   { label: "milk",   colour: "green", image: "milk.png" },
-        squash: { label: "squash", colour: "green", image: "squash.png" },
+        water:  { label: "water",  colour: "green", image: "water.svg" },
+        juice:  { label: "juice",  colour: "green", image: "juice.svg" },
+        milk:   { label: "milk",   colour: "green", image: "milk.svg" },
+        squash: { label: "squash", colour: "green", image: "squash.svg" },
 
         // Toys
-        ball:    { label: "ball",    colour: "green", image: "ball.png" },
-        bricks:  { label: "bricks",  colour: "green", image: "bricks.png" },
-        cars:    { label: "cars",    colour: "green", image: "cars.png" },
-        bubbles: { label: "bubbles", colour: "green", image: "bubbles.png" },
-        puzzle:  { label: "puzzle",  colour: "green", image: "puzzle.png" },
-        teddy:   { label: "teddy",   colour: "green", image: "teddy.png" },
+        ball:    { label: "ball",    colour: "green", image: "ball.svg" },
+        bricks:  { label: "bricks",  colour: "green", image: "bricks.svg" },
+        cars:    { label: "cars",    colour: "green", image: "cars.svg" },
+        bubbles: { label: "bubbles", colour: "green", image: "bubbles.svg" },
+        puzzle:  { label: "puzzle",  colour: "green", image: "puzzle.svg" },
+        teddy:   { label: "teddy",   colour: "green", image: "teddy.svg" },
 
         // Games
-        matching_game: { label: "matching game", colour: "green",  image: "matching-game.png" },
-        board_game:    { label: "board game",    colour: "green",  image: "board-game.png" },
-        ipad_game:     { label: "iPad game",     colour: "green",  image: "ipad-game.png" },
-        chase:         { label: "chase",         colour: "yellow", image: "chase.png" },
+        matching_game: { label: "matching game", colour: "green",  image: "matching-game.svg" },
+        board_game:    { label: "board game",    colour: "green",  image: "board-game.svg" },
+        ipad_game:     { label: "iPad game",     colour: "green",  image: "ipad-game.svg" },
+        chase:         { label: "chase",         colour: "yellow", image: "chase.svg" },
 
         // Activities
-        music:    { label: "music",    colour: "green",  image: "music.png" },
-        painting: { label: "painting", colour: "yellow", image: "painting.png" },
-        reading:  { label: "reading",  colour: "green",  image: "reading.png" },
-        swinging: { label: "swinging", colour: "green",  image: "swinging.png" },
+        music:    { label: "music",    colour: "green",  image: "music.svg" },
+        painting: { label: "painting", colour: "yellow", image: "painting.svg" },
+        reading:  { label: "reading",  colour: "green",  image: "reading.svg" },
+        swinging: { label: "swinging", colour: "green",  image: "swinging.svg" },
 
         // Places
-        playground:   { label: "playground", colour: "blue", image: "playground.png" },
-        garden:       { label: "garden",     colour: "blue", image: "garden.png" },
-        toilet_place: { label: "toilet",     colour: "blue", image: "toilet.png" },
-        library:      { label: "library",    colour: "blue", image: "library.png" },
-        hall:         { label: "hall",       colour: "blue", image: "hall.png" },
-        home_place:   { label: "home",       colour: "blue", image: "home.png" },
+        playground:   { label: "playground", colour: "blue", image: "playground.svg" },
+        garden:       { label: "garden",     colour: "blue", image: "garden.svg" },
+        toilet_place: { label: "toilet",     colour: "blue", image: "toilet.svg" },
+        library:      { label: "library",    colour: "blue", image: "library.svg" },
+        hall:         { label: "hall",       colour: "blue", image: "hall.svg" },
+        home_place:   { label: "home",       colour: "blue", image: "home.svg" },
 
         // Fixed bar keys
-        help:     { label: "help",     colour: "white", image: "help.png" },
-        stop:     { label: "stop",     colour: "white", image: "stop.png" },
-        more:     { label: "more",     colour: "white", image: "more.png" },
-        finished: { label: "finished", colour: "white", image: "finished.png" },
-        yes:      { label: "yes",      colour: "white", image: "yes.png" },
-        no:       { label: "no",       colour: "white", image: "no.png" }
+        help:     { label: "help",     colour: "white", image: "help.svg" },
+        stop:     { label: "stop",     colour: "white", image: "stop.svg" },
+        more:     { label: "more",     colour: "white", image: "more.svg" },
+        finished: { label: "finished", colour: "white", image: "finished.svg" },
+        yes:      { label: "yes",      colour: "white", image: "yes.svg" },
+        no:       { label: "no",       colour: "white", image: "no.svg" }
       }
     }
   }
