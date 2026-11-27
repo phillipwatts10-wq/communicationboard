@@ -92,7 +92,8 @@ window.COMMUNICATION_DATA = {
         voiceURI: "",         // empty = British English if available
         pressDelayMs: 1000,   // double-press protection, in milliseconds
         hiddenFixedKeys: [],  // e.g. ["more"] to hide the "more" key
-        muted: false          // true = board starts with speech off
+        muted: false,         // true = board starts with speech off
+        theme: "light"        // "light" or "dark"
       },
 
       // ---------- COLOURS ----------
@@ -105,6 +106,13 @@ window.COMMUNICATION_DATA = {
         blue:   { background: "#8DC4F2", text: "#000000", border: "#000000" },
         purple: { background: "#C9A8E8", text: "#000000", border: "#000000" },
         white:  { background: "#FFFFFF", text: "#000000", border: "#000000" }
+      },
+
+      // ---------- DARK MODE COLOURS ----------
+      // Used instead of the colours above when staff choose Dark.
+      // Colours not listed here stay the same in Dark mode.
+      darkColours: {
+        white: { background: "#2B2B2B", text: "#FFFFFF", border: "#FFFFFF" }
       },
 
       // ---------- FIXED BAR ----------

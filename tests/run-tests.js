@@ -701,6 +701,74 @@ async function testMute(browser) {
   await context.close();
 }
 
+// ---------- TEST 10: dark mode ----------
+async function contrastProblems(page) {
+  return page.evaluate(() => {
+    const rgb = (c) => (c.match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
+    const lum = (c) => { const v = rgb(c).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+    const ratio = (a, b) => { const [h, l] = [lum(a), lum(b)].sort((x, y) => y - x); return (h + 0.05) / (l + 0.05); };
+    const bgOf = (e) => { while (e) { const b = getComputedStyle(e).backgroundColor; if (b && b !== "rgba(0, 0, 0, 0)" && b !== "transparent") return b; e = e.parentElement; } return "rgb(255, 255, 255)"; };
+    const out = [];
+    document.querySelectorAll("#app button, .strip-card, #mute-indicator").forEach((el) => {
+      if (el.offsetParent === null || getComputedStyle(el).visibility === "hidden") return;
+      const textEl = el.querySelector(".label") || el;
+      if (!textEl.textContent.trim()) return;
+      const r = ratio(getComputedStyle(textEl).color, bgOf(el));
+      if (r < 4.5) out.push((el.dataset.word || el.id) + " " + r.toFixed(2));
+    });
+    return out;
+  });
+}
+
+async function testDarkMode(browser) {
+  for (const vp of VIEWPORTS) {
+    const { page, context, errors } = await newPage(browser, vp, { pressDelayMs: 0 });
+    check(await page.getAttribute("html", "data-theme") === "light", vp.name + " Dark: starts in light mode");
+    check((await contrastProblems(page)).length === 0, vp.name + " Light: all button words readable");
+    await openSettings(page);
+    await page.click('[data-theme-choice="dark"]');
+    await page.screenshot({ path: path.join(SHOTS, "dark-settings-" + vp.name + ".png") });
+    await page.click("#close-settings");
+    check(await page.getAttribute("html", "data-theme") === "dark", vp.name + " Dark: switched on");
+    const bodyBg = await page.$eval("body", (b) => getComputedStyle(b).backgroundColor);
+    check(bodyBg === "rgb(18, 18, 18)", vp.name + " Dark: page background is dark (" + bodyBg + ")");
+
+    for (const sid of Object.keys(BOARD.screens)) {
+      await goToScreen(page, sid);
+      for (const wid of BOARD.screens[sid].slots) {
+        const w = BOARD.words[wid];
+        const want = (BOARD.darkColours && BOARD.darkColours[w.colour]) || BOARD.colours[w.colour];
+        const bg = await page.$eval('#grid [data-word="' + wid + '"]', (e) => getComputedStyle(e).backgroundColor);
+        check(bg === hexToRgb(want.background), vp.name + " Dark: " + wid + " colour " + bg);
+      }
+      const bad = await contrastProblems(page);
+      check(bad.length === 0, vp.name + " Dark / " + sid + ": all words readable (" + bad.join(", ") + ")");
+      await layoutCheck(page, vp.name + " Dark / " + sid, vp, 8);
+    }
+    // Sentence with mixed colours, then screenshots.
+    await goToScreen(page, "want");
+    await page.click('#grid [data-word="places"]');
+    await page.click('#grid [data-word="garden"]');
+    await page.click('#fixed-bar [data-word="yes"]');
+    const cards = await page.$$eval(".strip-card", (els) => els.map((e) => getComputedStyle(e).backgroundColor));
+    check(cards[0] === hexToRgb(BOARD.colours.blue.background) && cards[1] === hexToRgb(BOARD.darkColours.white.background),
+      vp.name + " Dark: strip cards use dark-mode colours");
+    await page.screenshot({ path: path.join(SHOTS, "dark-places-" + vp.name + ".png") });
+    await goToScreen(page, "want");
+    await page.screenshot({ path: path.join(SHOTS, "dark-want-" + vp.name + ".png") });
+
+    await page.reload();
+    check(await page.getAttribute("html", "data-theme") === "dark", vp.name + " Dark: kept after reload");
+    await openSettings(page);
+    await page.click('[data-theme-choice="light"]');
+    await page.click("#close-settings");
+    const back = await page.$eval("body", (b) => getComputedStyle(b).backgroundColor);
+    check(back === "rgb(230, 230, 225)", vp.name + " Dark: back to light (" + back + ")");
+    check(errors.length === 0, vp.name + " Dark: no page errors (" + errors.join("; ") + ")");
+    await context.close();
+  }
+}
+
 // ---------- run ----------
 let BASE;
 (async () => {
@@ -717,6 +785,7 @@ let BASE;
     await testStaffTouch(browser);
     await testMyWords(browser);
     await testMute(browser);
+    await testDarkMode(browser);
   } catch (e) {
     failures.push("Test crashed: " + e.stack);
   }

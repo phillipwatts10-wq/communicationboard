@@ -16,7 +16,8 @@
     voiceURI: "",
     pressDelayMs: 1000,
     hiddenFixedKeys: [],
-    muted: false
+    muted: false,
+    theme: "light"
   };
 
   const $ = (id) => document.getElementById(id);
@@ -170,6 +171,7 @@
     if (!Array.isArray(s.hiddenFixedKeys)) s.hiddenFixedKeys = [];
     if (typeof s.voiceURI !== "string") s.voiceURI = "";
     s.muted = s.muted === true;
+    s.theme = s.theme === "dark" ? "dark" : "light";
     return s;
   }
 
@@ -265,7 +267,8 @@
 
   // ---------- Building buttons ----------
   function paint(node, colourName) {
-    const c = board.colours[colourName] || board.colours.white;
+    const dark = settings.theme === "dark" && board.darkColours && board.darkColours[colourName];
+    const c = dark || board.colours[colourName] || board.colours.white;
     node.style.backgroundColor = c.background;
     node.style.color = c.text;
     node.style.borderColor = c.border;
@@ -574,6 +577,9 @@
     document.querySelectorAll("[data-muted]").forEach((b) => {
       b.setAttribute("aria-pressed", String((b.dataset.muted === "true") === settings.muted));
     });
+    document.querySelectorAll("[data-theme-choice]").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.themeChoice === settings.theme));
+    });
     fillVoiceList();
     $("rate").value = String(settings.rate);
     $("rate-value").textContent = settings.rate.toFixed(2);
@@ -641,6 +647,24 @@
     });
   });
 
+  document.querySelectorAll("[data-theme-choice]").forEach((b) => {
+    b.addEventListener("click", () => {
+      settings.theme = b.dataset.themeChoice;
+      saveSettings();
+      applyTheme();
+      fillSettings();
+    });
+  });
+
+  // Switches light/dark and redraws buttons (their colours are set per word).
+  function applyTheme() {
+    document.documentElement.dataset.theme = settings.theme;
+    drawGrid();
+    drawStrip();
+    drawFixedBar();
+    if (!$("settings").hidden) drawMyWords();
+  }
+
   function drawMuteIndicator() {
     $("mute-indicator").hidden = !settings.muted;
   }
@@ -680,9 +704,8 @@
     settings = tidySettings(defaults());
     saveSettings();
     state.page = 0;
-    drawGrid();
-    drawFixedBar();
     drawMuteIndicator();
+    applyTheme();
     fillSettings();
   });
 
@@ -957,7 +980,5 @@
 
   // ---------- Start ----------
   drawMuteIndicator();
-  drawGrid();
-  drawStrip();
-  drawFixedBar();
+  applyTheme();
 })();

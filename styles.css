@@ -8,6 +8,7 @@
   --page-bg: #E6E6E1;
   --ink: #000000;
   --panel-bg: #FFFFFF;
+  --symbol-bg: #FFFFFF;
   --border: 4px;
   --radius: 14px;
   --gap: 12px;
@@ -248,7 +249,7 @@ button {
   justify-content: center;
   min-height: 0;
   border-radius: 8px;
-  background: #FFFFFF;
+  background: var(--symbol-bg);
   border: 2px solid rgba(0, 0, 0, 0.25);
   overflow: hidden;
   padding: 3px;
@@ -461,6 +462,40 @@ input[type="text"] {
 
 #we-delete { color: #B00020; border-color: #B00020; }
 #we-delete[hidden] { display: none; }
+
+/* ============================================================
+   DARK MODE (Staff → Display → Dark)
+   Word button colours come from data/board.js (darkColours).
+   ============================================================ */
+:root[data-theme="dark"] {
+  --page-bg: #121212;
+  --ink: #FFFFFF;
+  --panel-bg: #1E1E1E;
+  --symbol-bg: #D6D6D6;   /* light enough to keep symbols' black outlines clear */
+  color-scheme: dark;
+}
+:root[data-theme="dark"] #staff { border-color: #9A9A9A; color: #CFCFCF; }
+:root[data-theme="dark"] #staff.holding,
+:root[data-theme="dark"] #mute-indicator { background: #1E1E1E; border-color: #FFFFFF; color: #FFFFFF; }
+:root[data-theme="dark"] #mute-indicator svg { fill: #FFFFFF; }
+:root[data-theme="dark"] #mute-indicator svg path { stroke: #FFFFFF; }
+:root[data-theme="dark"] .keypad button,
+:root[data-theme="dark"] .modal-box button,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] input[type="text"],
+:root[data-theme="dark"] .file-button,
+:root[data-theme="dark"] .picture-preview { background: #1E1E1E; color: #FFFFFF; border-color: #FFFFFF; }
+:root[data-theme="dark"] .modal-box button.primary,
+:root[data-theme="dark"] .choice[aria-pressed="true"] { background: #FFFFFF; color: #000000; }
+:root[data-theme="dark"] .toggle-grid button[aria-pressed="false"] { background: #2A2A2A; color: #AAAAAA; }
+:root[data-theme="dark"] .hint { color: #CCCCCC; }
+:root[data-theme="dark"] .settings-box section,
+:root[data-theme="dark"] .settings-actions { border-color: #555555; }
+:root[data-theme="dark"] .swatches button[aria-pressed="true"] { outline-color: #FFFFFF; }
+:root[data-theme="dark"] #we-delete { color: #FF8A80; border-color: #FF8A80; }
+:root[data-theme="dark"] .modal-box .symbol-picker button { background: #D6D6D6; }
+:root[data-theme="dark"] .picture-preview img { background: #D6D6D6; }
+:root[data-theme="dark"] .modal { background: rgba(0, 0, 0, 0.7); }
 
 /* ---------- Data file problem message ---------- */
 .fatal {

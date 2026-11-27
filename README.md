@@ -31,6 +31,9 @@ This only stops students opening settings by accident – it is **not** security
 
 Settings are saved on that iPad only:
 - 8 or 12 buttons per screen
+- light or dark display. In Dark, the page, strip, controls and white buttons go
+  dark; word colours stay the same; symbol spaces are light grey so pictures stay
+  clear. Dark colours are set in `darkColours` in `data/board.js`.
 - speech on or off (mute). When muted the board is silent and shows "Sound off";
   words still join the sentence. Test voice still plays so staff can check it.
 - voice and speaking speed (starts at 0.8), with a Test voice button
