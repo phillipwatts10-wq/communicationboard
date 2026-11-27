@@ -6,6 +6,9 @@
 (function () {
   "use strict";
 
+  // Must match the board-version number in index.html.
+  const APP_VERSION = "8";
+
   // ---------- Fixed rules ----------
   const LONG_PRESS_MS = 3000;       // hold the Staff button this long
   const MAX_SENTENCE_WORDS = 12;    // strip stops adding words after this (2 rows of 6)
@@ -710,6 +713,27 @@
   });
 
   $("close-settings").addEventListener("click", closeSettings);
+
+  // ---------- Version and reload ----------
+  const pageVersionTag = document.querySelector('meta[name="board-version"]');
+  const pageVersion = pageVersionTag ? pageVersionTag.content : "?";
+  $("board-version").textContent = pageVersion === APP_VERSION ? APP_VERSION : (pageVersion + " / " + APP_VERSION + " (mixed – press Reload)");
+
+  // Loads the page again with a new address, so the iPad cannot reuse old saved copies.
+  function reloadBoard() {
+    location.replace(location.pathname + "?reload=" + Date.now());
+  }
+  $("reload-board").addEventListener("click", reloadBoard);
+
+  // If the page and this file are from different versions, reload once to fix it.
+  if (pageVersion !== APP_VERSION) {
+    let tried = false;
+    try { tried = sessionStorage.getItem("commboard.versionReload") === APP_VERSION + "/" + pageVersion; } catch (e) { tried = true; }
+    if (!tried) {
+      try { sessionStorage.setItem("commboard.versionReload", APP_VERSION + "/" + pageVersion); } catch (e) { /* ignore */ }
+      reloadBoard();
+    }
+  }
 
   // ---------- My words: list ----------
   function drawMyWords() {

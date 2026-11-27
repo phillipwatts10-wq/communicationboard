@@ -107,7 +107,7 @@ async function newPage(browser, viewport, settings, opts = {}) {
     }, ["commboard.settings." + BOARD.id, JSON.stringify(settings)]);
   }
   if (opts.extraData) {
-    await context.route("**/data/board.js", async (route) => {
+    await context.route(/\/data\/board\.js(\?.*)?$/, async (route) => {
       const body = fs.readFileSync(path.join(ROOT, "data/board.js"), "utf8") + "\n" + opts.extraData;
       await route.fulfill({ status: 200, contentType: "text/javascript", body });
     });
@@ -769,6 +769,48 @@ async function testDarkMode(browser) {
   }
 }
 
+// ---------- TEST 11: version, Reload button, mixed-version self-fix ----------
+async function testVersionAndReload(browser) {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const v = html.match(/name="board-version" content="([^"]+)"/)[1];
+  const appV = fs.readFileSync(path.join(ROOT, "app.js"), "utf8").match(/APP_VERSION = "([^"]+)"/)[1];
+  check(v === appV, "Version: index.html and app.js versions match (" + v + " / " + appV + ")");
+  check((html.match(/\?v=/g) || []).length === 3 && html.indexOf("?v=" + v) !== -1, "Version: styles, data and app files carry ?v=" + v);
+
+  const { page, context, errors } = await newPage(browser, VIEWPORTS[0], { pressDelayMs: 0 });
+  await openSettings(page);
+  check((await page.textContent("#board-version")).trim() === v, "Version: shown in settings");
+  await page.click('[data-theme-choice="dark"]');
+  await page.click("#close-settings");
+  await page.click('#grid [data-word="i"]');
+  await openSettings(page);
+  await page.click("#reload-board");
+  await page.waitForLoadState("load");
+  await page.waitForTimeout(300);
+  check(page.url().indexOf("?reload=") !== -1, "Reload: page reloaded with a fresh address");
+  check(await page.getAttribute("html", "data-theme") === "dark", "Reload: settings kept");
+  check(await screenOf(page) === "home", "Reload: board works after reload");
+  check(errors.length === 0, "Reload: no page errors (" + errors.join("; ") + ")");
+  await context.close();
+
+  // Simulate an iPad that has an old page with the new app file.
+  const ctx2 = await browser.newContext({ viewport: VIEWPORTS[0] });
+  await ctx2.addInitScript(speechStub);
+  let loads = 0;
+  await ctx2.route(/127\.0\.0\.1:\d+\/(\?.*)?$/, async (route) => {
+    loads++;
+    const body = fs.readFileSync(path.join(ROOT, "index.html"), "utf8").replace('content="' + v + '"', 'content="old"');
+    await route.fulfill({ status: 200, contentType: "text/html", body });
+  });
+  const p2 = await ctx2.newPage();
+  await p2.goto(BASE);
+  await p2.waitForTimeout(1500);
+  check(loads === 2, "Mixed versions: board reloads itself once, not forever (loads: " + loads + ")");
+  await p2.evaluate(() => document.getElementById("settings").hidden = false);
+  check((await p2.textContent("#board-version")).indexOf("mixed") !== -1, "Mixed versions: settings say 'mixed – press Reload'");
+  await ctx2.close();
+}
+
 // ---------- run ----------
 let BASE;
 (async () => {
@@ -786,6 +828,7 @@ let BASE;
     await testMyWords(browser);
     await testMute(browser);
     await testDarkMode(browser);
+    await testVersionAndReload(browser);
   } catch (e) {
     failures.push("Test crashed: " + e.stack);
   }

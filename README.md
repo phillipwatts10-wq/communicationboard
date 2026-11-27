@@ -41,6 +41,16 @@ Settings are saved on that iPad only:
 - show or hide each bottom-bar key (hidden keys leave a gap so others don't move)
 - **My words**: add, change or delete your own words (see below)
 
+## Getting updates
+
+Staff settings → **Updates** shows the board version and has a **Reload board**
+button. Press it after an update (especially in the Home Screen version, which
+has no reload button). Settings and added words are kept.
+
+When changing any file, raise the version number in **both** `index.html`
+(`board-version` and the `?v=` numbers) and `app.js` (`APP_VERSION`). This makes
+iPads fetch the new files instead of using old saved copies.
+
 ## My words (adding your own words)
 
 Staff → **+ Add a word**. Choose the word, what it should say (optional),

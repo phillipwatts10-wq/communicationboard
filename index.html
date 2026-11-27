@@ -7,7 +7,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="format-detection" content="telephone=no">
   <title>Communication Board</title>
-  <link rel="stylesheet" href="styles.css">
+  <!-- VERSION: when you change any file, raise this number here AND in app.js (APP_VERSION).
+       It makes iPads fetch the new files instead of using old saved copies. -->
+  <meta name="board-version" content="8">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <div id="app">
@@ -138,6 +141,12 @@
         <div id="my-words" class="my-words"></div>
       </section>
 
+      <section>
+        <h3>Updates</h3>
+        <p class="hint">Board version <strong id="board-version"></strong>. Press Reload to get the newest version. Your settings and words are kept.</p>
+        <button id="reload-board" type="button" class="wide">Reload board</button>
+      </section>
+
       <div class="settings-actions">
         <button id="reset-settings" type="button">Reset to defaults</button>
         <button id="close-settings" type="button" class="primary">Done</button>
@@ -197,7 +206,7 @@
     </div>
   </div>
 
-  <script src="data/board.js"></script>
-  <script src="app.js"></script>
+  <script src="data/board.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
